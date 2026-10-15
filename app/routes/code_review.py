@@ -19,6 +19,7 @@ from fastapi.concurrency import run_in_threadpool
 from starlette.responses import Response
 
 from app.security.csrf import csrf_protect
+from app.services.ai_assist import AIAssistOutcome, run_ai_assist
 from app.services.code_analyzer import (
     EXTENSION_LANGUAGES,
     LANGUAGE_LABELS,
@@ -32,6 +33,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def ai_available(request: Request) -> bool:
+    from app.services.ai_provider import build_provider_from_settings
+
+    return build_provider_from_settings(request.app.state.settings) is not None
+
 SUPPORTED_EXTENSIONS = sorted(EXTENSION_LANGUAGES)
 
 
@@ -44,6 +51,7 @@ def _form_page(
     error: str | None = None,
     result=None,
     result_label: str = "",
+    ai_outcome: AIAssistOutcome | None = None,
     status_code: int = 200,
 ) -> Response:
     return templates.render(
@@ -53,11 +61,13 @@ def _form_page(
             "error": error,
             "result": result,
             "result_label": result_label,
+            "ai_outcome": ai_outcome,
             "code_value": code_value,
             "language_choice": language_choice,
             "language_labels": LANGUAGE_LABELS,
             "supported_languages": SUPPORTED_LANGUAGES,
             "supported_extensions": ", ".join(SUPPORTED_EXTENSIONS),
+            "ai_available": ai_available(request),
         },
         status_code=status_code,
     )
@@ -88,7 +98,16 @@ def _language_from_filename(filename: str) -> str | None:
     )
 
 
-async def _analyze(templates: PhantomTemplates, request: Request, *, content: str, language_choice: str, label: str, code_value: str = "") -> Response:
+async def _analyze(
+    templates: PhantomTemplates,
+    request: Request,
+    *,
+    content: str,
+    language_choice: str,
+    label: str,
+    code_value: str = "",
+    ai_consented: bool = False,
+) -> Response:
     try:
         language, findings = await run_in_threadpool(analyze_code, content, language_choice)
     except CodeReviewError as exc:
@@ -114,6 +133,24 @@ async def _analyze(templates: PhantomTemplates, request: Request, *, content: st
             ),
             status_code=502,
         )
+
+    # AI assist (optional, consent-gated). Deterministic results always stand.
+    deterministic_summary = (
+        f"{len(findings)} deterministic findings: "
+        + "; ".join(f"{f.title} (line {f.line_start}, {f.severity.value})" for f in findings[:10])
+        if findings
+        else ""
+    )
+    ai_outcome = await run_in_threadpool(
+        run_ai_assist,
+        settings=request.app.state.settings,
+        task="code_review",
+        consented=ai_consented,
+        content=content,  # already masked by the analyzer's rules for display
+        deterministic_summary=deterministic_summary,
+        target_label=label,
+    )
+
     return _form_page(
         templates,
         request,
@@ -121,6 +158,7 @@ async def _analyze(templates: PhantomTemplates, request: Request, *, content: st
         language_choice=language_choice,
         result=(language, findings),
         result_label=label,
+        ai_outcome=ai_outcome,
     )
 
 
@@ -141,6 +179,7 @@ async def code_review_submit(
         code = ""
     if not isinstance(language, str):
         language = "auto"
+    consent = form.get("ai_consent") == "on"
     return await _analyze(
         templates,
         request,
@@ -148,6 +187,7 @@ async def code_review_submit(
         language_choice=language,
         label="pasted snippet",
         code_value=code,
+        ai_consented=consent,
     )
 
 
@@ -214,10 +254,12 @@ async def code_review_upload(
             status_code=400,
         )
 
+    consent = form.get("ai_consent") == "on"
     return await _analyze(
         templates,
         request,
         content=content,
         language_choice=language if language in SUPPORTED_LANGUAGES else detected,
         label=label,
+        ai_consented=consent,
     )

@@ -16,12 +16,19 @@ from fastapi.concurrency import run_in_threadpool
 from starlette.responses import Response
 
 from app.security.csrf import csrf_protect
+from app.services.ai_assist import AIAssistOutcome, run_ai_assist
 from app.services.log_analyzer import LogAnalysisError, analyze_log
 from app.templating import PhantomTemplates, get_templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def ai_available(request: Request) -> bool:
+    from app.services.ai_provider import build_provider_from_settings
+
+    return build_provider_from_settings(request.app.state.settings) is not None
 
 LOG_EXTENSIONS = (".log", ".txt")
 
@@ -34,6 +41,7 @@ def _form_page(
     error: str | None = None,
     result=None,
     result_label: str = "",
+    ai_outcome: AIAssistOutcome | None = None,
     status_code: int = 200,
 ) -> Response:
     return templates.render(
@@ -44,6 +52,8 @@ def _form_page(
             "result": result,
             "result_label": result_label,
             "log_value": log_value,
+            "ai_outcome": ai_outcome,
+            "ai_available": ai_available(request),
         },
         status_code=status_code,
     )
@@ -70,6 +80,7 @@ async def _analyze(
     content: str,
     label: str,
     log_value: str = "",
+    ai_consented: bool = False,
 ) -> Response:
     try:
         result = await run_in_threadpool(analyze_log, content)
@@ -98,12 +109,27 @@ async def _analyze(
     # re-sharing the input never re-exposes a secret (PRD privacy stance).
     from app.services.log_analyzer import mask_secrets
 
+    ai_outcome = await run_in_threadpool(
+        run_ai_assist,
+        settings=request.app.state.settings,
+        task="log_analysis",
+        consented=ai_consented,
+        content=log_value,
+        deterministic_summary=(
+            f"{len(result.findings)} deterministic findings: "
+            + "; ".join(f"{f.title} ({f.severity.value})" for f in result.findings[:10])
+            if result.findings
+            else ""
+        ),
+        target_label=label,
+    )
     return _form_page(
         templates,
         request,
         log_value=mask_secrets(content),
         result=result,
         result_label=label,
+        ai_outcome=ai_outcome,
     )
 @router.api_route(
     "/log-analysis",
@@ -119,12 +145,14 @@ async def log_analysis_submit(
     log_text = form.get("log", "")
     if not isinstance(log_text, str):
         log_text = ""
+    consent = form.get("ai_consent") == "on"
     return await _analyze(
         templates,
         request,
         content=log_text,
         label="pasted log",
         log_value=log_text,
+        ai_consented=consent,
     )
 
 
@@ -182,4 +210,7 @@ async def log_analysis_upload(
             status_code=400,
         )
 
-    return await _analyze(templates, request, content=content, label=label)
+    consent = form.get("ai_consent") == "on"
+    return await _analyze(
+        templates, request, content=content, label=label, ai_consented=consent
+    )

@@ -29,6 +29,17 @@
               syslog-style, ISO, and Python logging formats are understood. Limit 512 KiB.
             </div>
           </div>
+          {% if ai_available %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="ai_consent" name="ai_consent">
+            <label class="form-check-label small" for="ai_consent">
+              Also get an AI-assisted interpretation. The masked log text and a summary of
+              deterministic findings will be sent to the configured hosted provider.
+            </label>
+          </div>
+          {% else %}
+          <p class="text-secondary small mb-2">AI assistance is disabled on this instance (not configured).</p>
+          {% endif %}
           <button class="btn btn-phantom" type="submit">Analyze log</button>
         </form>
       </div>
@@ -93,6 +104,45 @@
       </p>
     </div>
   </div>
+
+  {% if ai_outcome and ai_outcome.error %}
+  <div class="alert alert-info" role="status">
+    <strong>AI assistance:</strong> {{ ai_outcome.error }}
+  </div>
+  {% endif %}
+
+  {% if ai_outcome and ai_outcome.ai_analysis and ai_outcome.ai_analysis.findings %}
+  <div class="card ai-card mb-3">
+    <div class="card-body">
+      <h3 class="h6">AI-assisted interpretation
+        <span class="badge status-badge ms-1">AI-assisted — verify</span>
+      </h3>
+      <p class="text-secondary small mb-2">{{ ai_outcome.disclosure }}</p>
+      <div class="d-flex flex-column gap-2">
+        {% for ai_finding in ai_outcome.ai_analysis.findings %}
+        <div class="border-top pt-2">
+          <p class="mb-1">
+            <strong>{{ ai_finding.title }}</strong>
+            <span class="badge finding-badge finding-badge-{{ ai_finding.severity.value | lower }}">{{ ai_finding.severity.value }}</span>
+            {% if ai_finding.line_start %}<span class="text-secondary small">line {{ ai_finding.line_start }}</span>{% endif %}
+          </p>
+          <p class="mb-1"><strong>Evidence:</strong> <span class="text-break">{{ ai_finding.evidence }}</span></p>
+          <p class="text-secondary small mb-1">{{ ai_finding.explanation }}</p>
+          <p class="small mb-0"><strong>Suggested action:</strong> {{ ai_finding.recommendation }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="text-secondary small mb-0 mt-2">
+        AI output is validated for structure only — its claims are not verified facts. It is an
+        interpretation aid, not proof of compromise or of safety.
+      </p>
+    </div>
+  </div>
+  {% elif ai_outcome and ai_outcome.ai_analysis %}
+  <div class="alert alert-info" role="status">
+    The AI-assisted interpretation returned no additional findings. Deterministic results stand.
+  </div>
+  {% endif %}
 
   {% if result.findings %}
   <div class="d-flex flex-column gap-3">

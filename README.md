@@ -16,7 +16,7 @@ security audit. All checks are passive; findings are advisory.
 | 1 — Website checker | URL validation, SSRF protections, header rules | ✅ Done |
 | 2 — Source review | Paste/upload flow, deterministic rules, line references | ✅ Done |
 | 3 — Log analysis | Field parsing, repeated-failure rules, sample logs | ✅ Done |
-| 4 — AI assistance | Provider adapter, consent gates, redaction, structured outputs | ⬜ Pending |
+| 4 — AI assistance | Provider adapter, consent gates, redaction, structured outputs | ✅ Done (disabled by default) |
 | 5 — History & reports | Persistence UI, deletion, HTML report export | ⬜ Pending |
 | 6 — Polish & release | Accessibility, security review, docs, screenshots | ⬜ Pending |
 
@@ -56,7 +56,10 @@ development only.
 | `DATABASE_URL` | `sqlite:///./phantom.db` | SQLAlchemy URL (PostgreSQL-ready) |
 | `MAX_BODY_BYTES` | `1048576` | Hard cap for any request body |
 | `UPLOAD_MAX_BYTES` | `524288` | Per-upload cap for code/log workflows |
-| `AI_PROVIDER` | *(empty)* | Empty = AI assistance disabled (Phase 4) |
+| `AI_PROVIDER` | *(empty)* | AI assistance off unless set together with `AI_MODEL` and the key env var |
+| `AI_MODEL` | *(empty)* | Model name at the provider |
+| `AI_API_KEY_ENV` | `AI_API_KEY` | NAME of the env var holding the API key (never the key itself) |
+| `AI_BASE_URL` | `https://api.openai.com/v1` | Any OpenAI-compatible chat-completions endpoint |
 
 Secrets are read from the environment or a local `.env` (git-ignored). API keys
 are never displayed, logged, or stored in analysis records.

@@ -41,8 +41,14 @@ class Settings(BaseSettings):
     # Per-upload cap used by the code/log workflows (Phases 2-3).
     upload_max_bytes: int = 524_288
 
-    # Empty string = AI assistance disabled (PRD FR-11). Populated in Phase 4.
+    # Empty string = AI assistance disabled (PRD FR-11). When set, a hosted
+    # provider adapter is offered behind an explicit consent gate (Phase 4).
     ai_provider: str = ""
+    ai_model: str = ""
+    # NAME of the environment variable that holds the API key. The key itself
+    # is never read into settings or stored anywhere.
+    ai_api_key_env: str = "AI_API_KEY"
+    ai_base_url: str = "https://api.openai.com/v1"
 
     @property
     def is_production(self) -> bool:

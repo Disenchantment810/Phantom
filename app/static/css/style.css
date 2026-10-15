@@ -130,3 +130,12 @@ a:focus-visible,
   outline: 2px solid var(--phantom-accent);
   outline-offset: 2px;
 }
+
+/* AI-assisted section: visually distinct from deterministic findings. */
+.ai-card {
+  border-color: var(--phantom-accent);
+  border-width: 1px;
+  border-left-width: 4px;
+  border-left-color: var(--phantom-accent);
+  background-color: #101a24;
+}
