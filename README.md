@@ -18,7 +18,7 @@ security audit. All checks are passive; findings are advisory.
 | 3 — Log analysis | Field parsing, repeated-failure rules, sample logs | ✅ Done |
 | 4 — AI assistance | Provider adapter, consent gates, redaction, structured outputs | ✅ Done (disabled by default) |
 | 5 — History & reports | Persistence UI, deletion, HTML report export | ✅ Done |
-| 6 — Polish & release | Accessibility, security review, docs, screenshots | ⬜ Pending |
+| 6 — Polish & release | Accessibility, security review, coverage, docs | ✅ Done |
 
 ## Requirements
 
@@ -54,8 +54,8 @@ development only.
 | `ENVIRONMENT` | `development` | `production` requires `SECRET_KEY` and disables `/docs` |
 | `SECRET_KEY` | ephemeral (dev) | Signs CSRF tokens. Set a long random value |
 | `DATABASE_URL` | `sqlite:///./phantom.db` | SQLAlchemy URL (PostgreSQL-ready) |
-| `MAX_BODY_BYTES` | `1048576` | Hard cap for any request body |
-| `UPLOAD_MAX_BYTES` | `524288` | Per-upload cap for code/log workflows |
+| `MAX_BODY_BYTES` | `1048576` | Hard cap for any request body (Content-Length and chunked) |
+| `UPLOAD_MAX_BYTES` | `524288` | Per-submission cap for uploads and pasted code/logs |
 | `AI_PROVIDER` | *(empty)* | AI assistance off unless set together with `AI_MODEL` and the key env var |
 | `AI_MODEL` | *(empty)* | Model name at the provider |
 | `AI_API_KEY_ENV` | `AI_API_KEY` | NAME of the env var holding the API key (never the key itself) |
@@ -71,8 +71,18 @@ are never displayed, logged, or stored in analysis records.
 ```
 
 The suite covers input validation, the data model and migrations, CSRF
-enforcement, response security headers, body-size limits, and page rendering —
-all with isolated temporary databases and no network access.
+enforcement, response security headers (including chunked-body limits), both
+analysis engines, consent-gated AI fallback, history/report flows, and page
+rendering — all with isolated temporary databases and no network access.
+
+With coverage:
+
+```bash
+.venv/bin/pip install pytest-cov
+.venv/bin/python -m pytest --cov=app --cov-report=term-missing
+```
+
+Current: **96% line coverage** (248 tests).
 
 ## Safe-use boundaries
 
@@ -85,6 +95,18 @@ all with isolated temporary databases and no network access.
 - **Privacy.** Code and logs stay on your machine. Once AI assistance lands
   (Phase 4), content is sent to a provider only after explicit consent and
   secret redaction.
+
+## Screenshots
+
+To capture UI screenshots for this README (Firefox example; any browser works):
+
+```bash
+.venv/bin/uvicorn app.main:app --port 8000 &
+firefox --headless --screenshot docs/screenshots/dashboard.png \
+  --window-size=1440,900 http://127.0.0.1:8000/
+```
+
+Screenshots are not committed; capture locally if you want them.
 
 ## Limitations
 

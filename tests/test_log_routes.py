@@ -125,6 +125,16 @@ def test_upload_rejects_oversized_file(app_client):
     assert "too large" in response.text
 
 
+def test_paste_rejects_oversized_text(app_client):
+    # 512 KiB + 1: over the paste cap, under the 1 MiB request-body cap so the
+    # request reaches the route instead of failing at the middleware.
+    big = "x" * (512 * 1024 + 1)
+    response = _csrf_post(app_client, "/log-analysis", {"log": big})
+    assert response.status_code == 400
+    assert "too large" in response.text
+    assert "smaller excerpt" in response.text
+
+
 def test_upload_without_file_shows_error(app_client):
     response = _csrf_post(app_client, "/log-analysis/upload", {})
     assert response.status_code == 400

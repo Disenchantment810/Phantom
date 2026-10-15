@@ -126,3 +126,81 @@ class TestResolveRedirect:
     def test_non_http_scheme_rejected(self):
         with pytest.raises(SafeInputError, match="unsupported scheme"):
             resolve_redirect("ftp://example.com/file", "https://example.com/")
+
+
+class TestRejectionBranches:
+    """Error paths in the SSRF guard itself — each is a security control."""
+
+    def test_custom_resolver_exceptions_propagate_to_route_handler(self):
+        """Custom resolvers (tests only) may raise raw errors; the route's
+        catch-all converts them. Production always uses default_resolver,
+        whose wrapping is asserted separately."""
+        import socket
+
+        def resolver(host):
+            raise socket.gaierror(-2, "Name or service not known")
+
+        with pytest.raises(socket.gaierror):
+            validate_url("https://unresolvable.example/", resolver=resolver)
+
+    def test_default_resolver_wraps_gaierror(self, monkeypatch):
+        import socket
+
+        from app.services.input_safety import default_resolver
+
+        def fake_getaddrinfo(*args, **kwargs):
+            raise socket.gaierror(-2, "Name or service not known")
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        with pytest.raises(SafeInputError, match="could not be resolved"):
+            default_resolver("example.com")
+
+    def test_empty_host_rejected(self):
+        with pytest.raises(SafeInputError, match="no host"):
+            normalize_url("https://")
+
+    def test_overlong_host_rejected(self):
+        with pytest.raises(SafeInputError, match="too long"):
+            normalize_url("https://" + "a" * 300 + ".com/")
+
+    def test_space_in_host_rejected(self):
+        # The whole-URL whitespace guard fires before the host-character guard.
+        with pytest.raises(SafeInputError, match="whitespace or control"):
+            normalize_url("https://exa mple.com/")
+
+    def test_backslash_in_host_rejected(self):
+        # Backslash makes the netloc parse as a bad port; still rejected.
+        with pytest.raises(SafeInputError):
+            normalize_url("https:\\\\evil.com")
+
+    def test_idna_failure_rejected(self):
+        # A single label over 63 characters fails IDNA encoding.
+        with pytest.raises(SafeInputError, match="not a valid domain"):
+            normalize_url("https://" + "ü" * 64 + ".com/")
+
+    def test_port_with_garbage_value_rejected(self):
+        with pytest.raises(SafeInputError, match="port"):
+            normalize_url("https://example.com:notaport/")
+
+    def test_valid_port_survives_normalization(self):
+        assert (
+            normalize_url("https://example.com:8443/path")
+            == "https://example.com:8443/path"
+        )
+
+    def test_validate_url_rejects_credentials(self):
+        with pytest.raises(SafeInputError, match="credentials"):
+            validate_url("https://user:pass@example.com/")
+
+    def test_validate_url_rejects_non_http_scheme(self):
+        with pytest.raises(SafeInputError, match="Only http"):
+            validate_url("ftp://example.com/")
+
+    def test_malformed_dot_host_rejected(self):
+        # "https://./" is caught earlier as an invalid domain name.
+        with pytest.raises(SafeInputError):
+            validate_url("https://./")
+
+    def test_ipv6_literal_loopback_rejected(self):
+        with pytest.raises(SafeInputError, match="private or reserved"):
+            validate_url("https://[::1]:8080/")

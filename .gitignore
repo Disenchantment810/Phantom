@@ -30,3 +30,4 @@ uploads/
 
 # Local agent/CLI tooling state
 .abacusai/
+coverage.json/

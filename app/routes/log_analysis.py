@@ -165,6 +165,18 @@ async def log_analysis_submit(
     log_text = form.get("log", "")
     if not isinstance(log_text, str):
         log_text = ""
+    settings = request.app.state.settings
+    if len(log_text) > settings.upload_max_bytes:
+        limit_kib = settings.upload_max_bytes // 1024
+        return _form_page(
+            templates,
+            request,
+            error=(
+                f"The pasted log is too large (limit {limit_kib} KiB). "
+                "Paste a smaller excerpt instead."
+            ),
+            status_code=400,
+        )
     consent = form.get("ai_consent") == "on"
     return await _analyze(
         templates,

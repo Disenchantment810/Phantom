@@ -197,6 +197,18 @@ async def code_review_submit(
         code = ""
     if not isinstance(language, str):
         language = "auto"
+    settings = request.app.state.settings
+    if len(code) > settings.upload_max_bytes:
+        limit_kib = settings.upload_max_bytes // 1024
+        return _form_page(
+            templates,
+            request,
+            error=(
+                f"The pasted code is too large (limit {limit_kib} KiB). "
+                "Paste a smaller snippet instead."
+            ),
+            status_code=400,
+        )
     consent = form.get("ai_consent") == "on"
     return await _analyze(
         templates,

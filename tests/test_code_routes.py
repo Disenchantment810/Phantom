@@ -130,6 +130,16 @@ def test_upload_rejects_oversized_file(app_client):
     assert "too large" in response.text
 
 
+def test_paste_rejects_oversized_code(app_client):
+    # 512 KiB + 1: over the paste cap, under the 1 MiB request-body cap so the
+    # request reaches the route instead of failing at the middleware.
+    big = "x" * (512 * 1024 + 1)
+    response = _csrf_post(app_client, "/code-review", {"code": big, "language": "auto"})
+    assert response.status_code == 400
+    assert "too large" in response.text
+    assert "smaller snippet" in response.text
+
+
 def test_upload_rejects_binary_file(app_client):
     response = _csrf_post(
         app_client,
