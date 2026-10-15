@@ -16,7 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import database
 from app.config import APP_NAME, APP_VERSION, get_settings
-from app.routes import code_review, dashboard, log_analysis, reports, website
+from app.routes import code_review, dashboard, history, log_analysis, reports, website
 from app.security.csrf import CsrfMiddleware
 from app.security.middleware import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from app.templating import PhantomTemplates
@@ -63,6 +63,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     app.include_router(dashboard.router)
+    app.include_router(history.router)
     app.include_router(website.router)
     app.include_router(code_review.router)
     app.include_router(log_analysis.router)

@@ -2,7 +2,7 @@
 {% block title %}History · {{ app_name }}{% endblock %}
 {% block content %}
 <h1 class="h3 mb-1">Analysis history</h1>
-<p class="text-secondary">Saved analyses. Opening and deleting individual analyses arrives in Phase 5.</p>
+<p class="text-secondary">Saved analyses. Reports are downloadable per analysis; deletion is permanent.</p>
 
 <div class="card">
   <div class="card-body p-0">
@@ -13,27 +13,41 @@
           <th scope="col">#</th>
           <th scope="col">Type</th>
           <th scope="col">Target</th>
-          <th scope="col">Status</th>
+          <th scope="col">Findings</th>
           <th scope="col">Created</th>
+          <th scope="col" class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for analysis in analyses %}
         <tr>
           <td>{{ analysis.id }}</td>
-          <td>{{ analysis.analysis_type.value | replace('_', ' ') | title }}</td>
-          <td class="text-break">{{ analysis.target_label }}</td>
-          <td><span class="badge status-badge">{{ analysis.status.value | title }}</span></td>
+          <td>{{ type_labels.get(analysis.analysis_type, analysis.analysis_type.value) }}</td>
+          <td class="text-break"><a href="{{ url_for('analysis_detail', analysis_id=analysis.id) }}">{{ analysis.target_label }}</a></td>
+          <td>{{ analysis.findings | length }}</td>
           <td>{{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('analysis_detail', analysis_id=analysis.id) }}">Open</a>
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('analysis_report', analysis_id=analysis.id) }}">Report</a>
+            <form class="d-inline" method="post" action="{{ url_for('analysis_delete', analysis_id=analysis.id) }}"
+                  data-confirm="Delete this analysis permanently?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
     <p class="text-secondary px-3 py-4 mb-0">
-      Nothing here yet. Analyses are saved automatically once the workflows start producing results.
+      Nothing here yet. Analyses are saved automatically when you run the workflows.
     </p>
     {% endif %}
   </div>
 </div>
+
+<p class="text-secondary small mt-3">
+  Raw code and logs are not stored — only findings with short evidence excerpts.
+</p>
 {% endblock %}

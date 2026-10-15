@@ -60,6 +60,10 @@ class Finding(Base):
         _enum(FindingSource, 16), nullable=False, default=FindingSource.RULE
     )
 
+    # Deterministic rule identifier (e.g. "LOG-BRUTE-001"); null for website
+    # transport findings and AI-assisted findings.
+    rule_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     line_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     line_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

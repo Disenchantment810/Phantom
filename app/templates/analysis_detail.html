@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Analysis #{{ analysis.id }} · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
+  <h1 class="h3 mb-0">
+    {{ type_labels.get(analysis.analysis_type, analysis.analysis_type.value) }}
+    <span class="text-secondary fw-normal">#{{ analysis.id }}</span>
+  </h1>
+  <div>
+    <a class="btn btn-sm btn-phantom" href="{{ url_for('analysis_report', analysis_id=analysis.id) }}">Download report</a>
+  </div>
+</div>
+<p class="text-secondary text-break">{{ analysis.target_label }} · {{ analysis.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+
+<div class="alert alert-warning d-flex align-items-start" role="note">
+  <span class="me-2" aria-hidden="true">&#9888;</span>
+  <div>
+    <strong>Advisory notice.</strong> Findings are advisory and require human verification.
+    A clean result is not proof that the target is secure.
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-1">Summary</h2>
+    <p class="mb-0">{{ analysis.summary or "No summary recorded." }}</p>
+    {% if analysis.ai_consent_given %}
+    <p class="text-secondary small mt-2 mb-0">
+      AI assistance was used with consent{% if analysis.provider_used %} (provider: {{ analysis.provider_used }}){% endif %}.
+      AI-assisted findings below are labelled.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% set ai_findings = analysis.findings | rejectattr('source_type.value', 'equalto', 'rule') | list %}
+{% set rule_findings = analysis.findings | selectattr('source_type.value', 'equalto', 'rule') | list %}
+
+{% if analysis.findings %}
+<div class="d-flex flex-column gap-3">
+  {% for finding in rule_findings %}
+  <article class="card finding-card finding-{{ finding.severity.value | lower }}">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <h3 class="h6 mb-0">
+          {{ finding.title }}
+          {% if finding.rule_id %}<span class="text-secondary fw-normal">· {{ finding.rule_id }}</span>{% endif %}
+          {% if finding.line_start %}
+          <span class="text-secondary fw-normal">· line {{ finding.line_start }}{% if finding.line_end and finding.line_end != finding.line_start %}–{{ finding.line_end }}{% endif %}</span>
+          {% endif %}
+        </h3>
+        <span class="finding-badge finding-badge-{{ finding.severity.value | lower }} badge">{{ finding.severity.value }}</span>
+      </div>
+      <p class="mb-2"><strong>Evidence:</strong> <span class="text-break">{{ finding.evidence }}</span></p>
+      <p class="text-secondary mb-2">{{ finding.explanation }}</p>
+      <p class="mb-2"><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+      <p class="text-secondary small mb-0">Confidence: {{ finding.confidence.value }} · source: deterministic rule</p>
+    </div>
+  </article>
+  {% endfor %}
+  {% for finding in ai_findings %}
+  <article class="card ai-card finding-card finding-{{ finding.severity.value | lower }}">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <h3 class="h6 mb-0">
+          {{ finding.title }}
+          {% if finding.line_start %}<span class="text-secondary fw-normal">· line {{ finding.line_start }}</span>{% endif %}
+        </h3>
+        <span class="finding-badge finding-badge-{{ finding.severity.value | lower }} badge">{{ finding.severity.value }}</span>
+      </div>
+      <p class="mb-2"><strong>Evidence:</strong> <span class="text-break">{{ finding.evidence }}</span></p>
+      <p class="text-secondary mb-2">{{ finding.explanation }}</p>
+      <p class="mb-2"><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+      <p class="text-secondary small mb-0">Confidence: {{ finding.confidence.value }} · source: AI-assisted{% if analysis.provider_used %} ({{ analysis.provider_used }}){% endif %} — verify</p>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6 mb-1">No findings recorded</h2>
+    <p class="text-secondary small mb-0">Not proof of security — see the limitations in the report.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="mt-4">
+  <form class="d-inline" method="post" action="{{ url_for('analysis_delete', analysis_id=analysis.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-sm btn-outline-danger" type="submit">Delete this analysis</button>
+  </form>
+  <a class="btn btn-sm btn-outline-light ms-2" href="{{ url_for('history') }}">Back to history</a>
+</div>
+{% endblock %}

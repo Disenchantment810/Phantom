@@ -13,10 +13,14 @@ import re
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from app.security.csrf import csrf_protect
+from app.database import get_db
+from app.models import AnalysisType
 from app.services.ai_assist import AIAssistOutcome, run_ai_assist
+from app.services.persistence import persist_analysis
 from app.services.log_analyzer import LogAnalysisError, analyze_log
 from app.templating import PhantomTemplates, get_templates
 
@@ -81,6 +85,7 @@ async def _analyze(
     label: str,
     log_value: str = "",
     ai_consented: bool = False,
+    db: Session | None = None,
 ) -> Response:
     try:
         result = await run_in_threadpool(analyze_log, content)
@@ -123,6 +128,20 @@ async def _analyze(
         ),
         target_label=label,
     )
+    if db is not None:
+        persist_analysis(
+            db,
+            analysis_type=AnalysisType.LOG_ANALYSIS,
+            target_label=label,
+            summary=(
+                f"{result.stats.parsed_lines}/{result.stats.total_lines} lines parsed, "
+                f"{result.stats.failed_events} failed, {result.stats.success_events} successful, "
+                f"{len(result.findings)} indicator(s)."
+                + (f" AI-assisted interpretation by {ai_outcome.ai_analysis.provider_name}." if ai_outcome.ai_analysis else "")
+            ),
+            findings=result.findings,
+            ai_outcome=ai_outcome,
+        )
     return _form_page(
         templates,
         request,
@@ -140,6 +159,7 @@ async def _analyze(
 async def log_analysis_submit(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
+    db: Session = Depends(get_db),
 ):
     form = await request.form()
     log_text = form.get("log", "")
@@ -153,6 +173,7 @@ async def log_analysis_submit(
         label="pasted log",
         log_value=log_text,
         ai_consented=consent,
+        db=db,
     )
 
 
@@ -165,6 +186,7 @@ async def log_analysis_submit(
 async def log_analysis_upload(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
+    db: Session = Depends(get_db),
 ):
     settings = request.app.state.settings
     form = await request.form()
@@ -212,5 +234,5 @@ async def log_analysis_upload(
 
     consent = form.get("ai_consent") == "on"
     return await _analyze(
-        templates, request, content=content, label=label, ai_consented=consent
+        templates, request, content=content, label=label, ai_consented=consent, db=db
     )

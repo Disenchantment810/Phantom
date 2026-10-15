@@ -11,10 +11,14 @@ import logging
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy.orm import Session
 from starlette.responses import Response
 
+from app.database import get_db
+from app.models import AnalysisType
 from app.security.csrf import csrf_protect
 from app.services.input_safety import SafeInputError
+from app.services.persistence import persist_analysis
 from app.services.website_checker import WebsiteCheckResult, check_website
 from app.templating import PhantomTemplates, get_templates
 
@@ -57,6 +61,7 @@ def website_check(
 async def website_check_submit(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
+    db: Session = Depends(get_db),
 ):
     form = await request.form()
     raw_url = form.get("url", "")
@@ -89,7 +94,23 @@ async def website_check_submit(
             status_code=502,
         )
 
+    _persist_website(db, result)
     return _form_page(templates, request, url_value=raw_url[:200], result=result)
+
+
+def _persist_website(db: Session, result) -> None:  # noqa: ANN001
+    """Best-effort persistence; never breaks the user's check."""
+    from urllib.parse import urlunparse, urlparse
+
+    parsed = urlparse(result.final_url)
+    label = urlunparse((parsed.scheme, parsed.netloc, parsed.path, "", "", ""))
+    persist_analysis(
+        db,
+        analysis_type=AnalysisType.WEBSITE_CHECK,
+        target_label=label,
+        summary=result.summary,
+        findings=result.findings,
+    )
 
 
 def _log_label(raw_url: str) -> str:

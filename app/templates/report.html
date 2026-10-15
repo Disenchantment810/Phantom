@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHANTOM report — {{ type_label }} — {{ analysis.target_label }}</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; background: #f4f6f8; color: #1c2733; line-height: 1.55; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+    header.report { border-bottom: 3px solid #0f4c5c; padding-bottom: 1rem; margin-bottom: 1.75rem; }
+    header.report h1 { margin: 0 0 .25rem; font-size: 1.5rem; }
+    header.report .meta { color: #5a6a7a; font-size: .9rem; }
+    h2 { font-size: 1.1rem; margin: 2rem 0 .75rem; color: #0f4c5c; border-bottom: 1px solid #d7dee5; padding-bottom: .3rem; }
+    table.meta { border-collapse: collapse; width: 100%; font-size: .92rem; }
+    table.meta th, table.meta td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #e3e9ee; vertical-align: top; }
+    table.meta th { width: 12rem; color: #5a6a7a; font-weight: 600; }
+    .counts span { display: inline-block; margin-right: 1rem; font-size: .9rem; padding: .15rem .6rem; border-radius: 1rem; background: #e6ecf1; }
+    .disclaimer { background: #fff8e6; border: 1px solid #e6d9a8; border-left: 5px solid #d9a800; border-radius: 6px; padding: .9rem 1rem; margin: 1.25rem 0; font-size: .92rem; }
+    .notice { background: #eef4f8; border: 1px solid #c7d9e5; border-radius: 6px; padding: .9rem 1rem; margin: 1.25rem 0; font-size: .92rem; }
+    article.finding { background: #fff; border: 1px solid #dbe2e9; border-left-width: 5px; border-radius: 6px; padding: .9rem 1rem; margin: .9rem 0; }
+    article.finding h3 { margin: 0 0 .4rem; font-size: 1rem; }
+    article.finding .badge { float: right; font-size: .75rem; font-weight: 700; padding: .15rem .6rem; border-radius: 1rem; color: #fff; }
+    article.finding .loc { color: #5a6a7a; font-weight: 400; font-size: .85rem; }
+    article.finding pre { background: #f0f3f6; border: 1px solid #dbe2e9; border-radius: 4px; padding: .5rem .75rem; overflow: auto; font-size: .8rem; }
+    article.finding p { margin: .4rem 0; font-size: .92rem; }
+    .sev-informational { background: #8296a8; }
+    .sev-low { background: #b58a2e; }
+    .sev-medium { background: #d29922; }
+    .sev-high { background: #c93c37; }
+    .sev-critical { background: #8e1f1f; }
+    .f-informational { border-left-color: #8296a8; }
+    .f-low { border-left-color: #b58a2e; }
+    .f-medium { border-left-color: #d29922; }
+    .f-high { border-left-color: #c93c37; }
+    .f-critical { border-left-color: #8e1f1f; }
+    .ai-tag { display: inline-block; font-size: .72rem; font-weight: 700; background: #0f4c5c; color: #fff; border-radius: 1rem; padding: .1rem .55rem; margin-left: .4rem; }
+    footer { margin-top: 2.5rem; border-top: 1px solid #d7dee5; padding-top: 1rem; color: #5a6a7a; font-size: .82rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="report">
+      <h1>{{ type_label }} — report</h1>
+      <div class="meta">
+        Generated {{ analysis.completed_at.strftime('%Y-%m-%d %H:%M UTC') if analysis.completed_at else 'n/a' }}
+        · PHANTOM analysis #{{ analysis.id }}
+      </div>
+    </header>
+
+    <div class="disclaimer">
+      <strong>Advisory notice.</strong> These results are advisory and require human verification.
+      They may contain false positives and false negatives. A clean result is not proof that a
+      system is secure, and a flagged finding is not proof of compromise.
+    </div>
+
+    <h2>Scope</h2>
+    <table class="meta">
+      <tr><th>Analysis type</th><td>{{ type_label }}</td></tr>
+      <tr><th>Target</th><td class="target-label">{{ analysis.target_label }}</td></tr>
+      <tr><th>Performed</th><td>{{ analysis.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</td></tr>
+      <tr><th>What was checked</th><td>{{ scope_note }}</td></tr>
+    </table>
+
+    <h2>Summary</h2>
+    <p>{{ analysis.summary or "No summary recorded." }}</p>
+    <p class="counts">
+      {% for level, count in severity_counts.items() %}
+        {% if count %}<span><strong>{{ count }}</strong> {{ level }}</span>{% endif %}
+      {% endfor %}
+    </p>
+
+    {% if analysis.ai_consent_given %}
+    <div class="notice">
+      <strong>AI assistance:</strong> with the user's explicit consent for this submission, masked
+      content and a findings summary were sent to the hosted provider
+      {% if analysis.provider_used %}<strong>{{ analysis.provider_used }}</strong>{% else %}(provider not recorded){% endif %}.
+      AI-assisted findings below are labelled and were validated for structure only.
+    </div>
+    {% endif %}
+
+    <h2>Findings</h2>
+    {% if rule_findings or ai_findings %}
+      {% for finding in rule_findings %}
+      <article class="finding f-{{ finding.severity.value | lower }}">
+        <h3>
+          <span class="badge sev-{{ finding.severity.value | lower }}">{{ finding.severity.value }}</span>
+          {{ finding.title }}
+          {% if finding.rule_id %}<span class="loc">· rule {{ finding.rule_id }}</span>{% endif %}
+          {% if finding.line_start %}<span class="loc">· line {{ finding.line_start }}{% if finding.line_end and finding.line_end != finding.line_start %}–{{ finding.line_end }}{% endif %}</span>{% endif %}
+        </h3>
+        <p><strong>Evidence:</strong></p>
+        <pre>{{ finding.evidence }}</pre>
+        <p>{{ finding.explanation }}</p>
+        <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+        <p class="loc">Confidence: {{ finding.confidence.value }} · source: deterministic rule</p>
+      </article>
+      {% endfor %}
+      {% for finding in ai_findings %}
+      <article class="finding f-{{ finding.severity.value | lower }}">
+        <h3>
+          <span class="badge sev-{{ finding.severity.value | lower }}">{{ finding.severity.value }}</span>
+          {{ finding.title }}<span class="ai-tag">AI-assisted — verify</span>
+          {% if finding.line_start %}<span class="loc">· line {{ finding.line_start }}{% if finding.line_end and finding.line_end != finding.line_start %}–{{ finding.line_end }}{% endif %}</span>{% endif %}
+        </h3>
+        <p><strong>Evidence:</strong></p>
+        <pre>{{ finding.evidence }}</pre>
+        <p>{{ finding.explanation }}</p>
+        <p><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+        <p class="loc">Confidence: {{ finding.confidence.value }} · source: AI-assisted interpretation{{ ' by ' + analysis.provider_used if analysis.provider_used }}</p>
+      </article>
+      {% endfor %}
+    {% else %}
+      <p>No findings were recorded for this analysis.</p>
+    {% endif %}
+
+    <h2>Limitations</h2>
+    <p>{{ limitations }}</p>
+
+    <h2>Data handling</h2>
+    <p>{{ privacy_note }}</p>
+
+    <footer>
+      Generated by PHANTOM — an educational, local-first security analysis workbench.
+      Passive checks only. This report must be reviewed by a human before any action is taken.
+    </footer>
+  </div>
+</body>
+</html>

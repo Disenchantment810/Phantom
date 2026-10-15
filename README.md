@@ -17,7 +17,7 @@ security audit. All checks are passive; findings are advisory.
 | 2 — Source review | Paste/upload flow, deterministic rules, line references | ✅ Done |
 | 3 — Log analysis | Field parsing, repeated-failure rules, sample logs | ✅ Done |
 | 4 — AI assistance | Provider adapter, consent gates, redaction, structured outputs | ✅ Done (disabled by default) |
-| 5 — History & reports | Persistence UI, deletion, HTML report export | ⬜ Pending |
+| 5 — History & reports | Persistence UI, deletion, HTML report export | ✅ Done |
 | 6 — Polish & release | Accessibility, security review, docs, screenshots | ⬜ Pending |
 
 ## Requirements

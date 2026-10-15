@@ -1,4 +1,4 @@
-"""Dashboard, history, and settings routes (Phase 0 foundation)."""
+"""Dashboard and settings routes (Phase 0 foundation)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from app.templating import PhantomTemplates, get_templates
 
 router = APIRouter()
 
-
 @router.api_route("/", methods=["GET", "HEAD"], name="dashboard")
 def dashboard(
     request: Request,
@@ -24,16 +23,6 @@ def dashboard(
     return templates.render(
         request, "index.html", {"recent": recent, "total_analyses": total}
     )
-
-
-@router.api_route("/history", methods=["GET", "HEAD"], name="history")
-def history(
-    request: Request,
-    db: Session = Depends(get_db),
-    templates: PhantomTemplates = Depends(get_templates),
-):
-    analyses = db.query(Analysis).order_by(Analysis.created_at.desc()).all()
-    return templates.render(request, "history.html", {"analyses": analyses})
 
 
 @router.api_route("/settings", methods=["GET", "HEAD"], name="settings")

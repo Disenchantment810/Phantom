@@ -72,6 +72,7 @@ class CheckFinding:
     recommendation: str
     confidence: Confidence = Confidence.HIGH
     source_type: FindingSource = FindingSource.RULE
+    rule_id: str = ""
 
 
 @dataclass
@@ -105,6 +106,7 @@ def _evidence(value: str) -> str:
 
 def _header_finding(
     *,
+    rule_id: str,
     header_name: str,
     observed: str | None,
     title_missing: str,
@@ -118,6 +120,7 @@ def _header_finding(
 ) -> CheckFinding:
     if observed is None:
         return CheckFinding(
+            rule_id=rule_id,
             title=title_missing,
             category="headers",
             severity=severity_missing,
@@ -128,6 +131,7 @@ def _header_finding(
         )
     if severity_weak is not None and is_weak:
         return CheckFinding(
+            rule_id=rule_id,
             title=f"{header_name} configuration is weak",
             category="headers",
             severity=severity_weak,
@@ -137,6 +141,7 @@ def _header_finding(
             confidence=Confidence.HIGH,
         )
     return CheckFinding(
+        rule_id=rule_id,
         title=title_present,
         category="headers",
         severity=Severity.INFORMATIONAL,
@@ -169,6 +174,7 @@ def evaluate_headers(
         csp_weak = any(token in script_sources for token in ("'unsafe-inline'", "'unsafe-eval'", "*"))
     findings.append(
         _header_finding(
+            rule_id="WEB-CSP-001",
             header_name="Content-Security-Policy",
             observed=csp,
             title_missing="No Content-Security-Policy header",
@@ -205,6 +211,7 @@ def evaluate_headers(
     if is_https:
         findings.append(
             _header_finding(
+                rule_id="WEB-HSTS-001",
                 header_name="Strict-Transport-Security",
                 observed=hsts,
                 title_missing="No Strict-Transport-Security header",
@@ -236,6 +243,7 @@ def evaluate_headers(
     nosniff = headers.get("x-content-type-options")
     findings.append(
         _header_finding(
+            rule_id="WEB-NOSNIFF-001",
             header_name="X-Content-Type-Options",
             observed=nosniff,
             title_missing="No X-Content-Type-Options header",
@@ -260,6 +268,7 @@ def evaluate_headers(
     referrer_weak = referrer is not None and referrer.strip().lower() in {"unsafe-url", "no-referrer-when-downgrade"}
     findings.append(
         _header_finding(
+            rule_id="WEB-REFERRER-001",
             header_name="Referrer-Policy",
             observed=referrer,
             title_missing="No Referrer-Policy header",
@@ -296,6 +305,7 @@ def evaluate_headers(
         observed_value = f"X-Frame-Options: {xfo}" if xfo else f"CSP frame-ancestors: {frame_ancestors}"
         findings.append(
             CheckFinding(
+                rule_id="WEB-FRAME-001",
                 title="Frame protection is configured",
                 category="headers",
                 severity=Severity.INFORMATIONAL,
@@ -311,6 +321,7 @@ def evaluate_headers(
         detail = "an unrecognised value" if xfo else "no X-Frame-Options header and no frame-ancestors directive"
         findings.append(
             CheckFinding(
+                rule_id="WEB-FRAME-001",
                 title="No frame protection observed",
                 category="headers",
                 severity=Severity.LOW,
@@ -341,6 +352,7 @@ def _https_finding(requested_url: str, final_url: str, status_code: int) -> Chec
     final_is_https = final_url.startswith("https://")
     if requested_is_http and final_is_https:
         return CheckFinding(
+            rule_id="WEB-TRANSPORT-001",
             title="HTTP requests are redirected to HTTPS",
             category="transport",
             severity=Severity.INFORMATIONAL,
@@ -350,6 +362,7 @@ def _https_finding(requested_url: str, final_url: str, status_code: int) -> Chec
         )
     if requested_is_http and not final_is_https:
         return CheckFinding(
+            rule_id="WEB-TRANSPORT-002",
             title="Site is served without HTTPS",
             category="transport",
             severity=Severity.LOW,
@@ -361,6 +374,7 @@ def _https_finding(requested_url: str, final_url: str, status_code: int) -> Chec
             recommendation="Serve the site over HTTPS and redirect HTTP requests to it.",
         )
     return CheckFinding(
+        rule_id="WEB-TRANSPORT-003",
         title="Checked over HTTPS",
         category="transport",
         severity=Severity.INFORMATIONAL,

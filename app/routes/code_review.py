@@ -16,10 +16,14 @@ import re
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from app.security.csrf import csrf_protect
+from app.database import get_db
+from app.models import AnalysisType
 from app.services.ai_assist import AIAssistOutcome, run_ai_assist
+from app.services.persistence import persist_analysis
 from app.services.code_analyzer import (
     EXTENSION_LANGUAGES,
     LANGUAGE_LABELS,
@@ -107,6 +111,7 @@ async def _analyze(
     label: str,
     code_value: str = "",
     ai_consented: bool = False,
+    db: Session | None = None,
 ) -> Response:
     try:
         language, findings = await run_in_threadpool(analyze_code, content, language_choice)
@@ -151,6 +156,18 @@ async def _analyze(
         target_label=label,
     )
 
+    if db is not None:
+        persist_analysis(
+            db,
+            analysis_type=AnalysisType.CODE_REVIEW,
+            target_label=label,
+            summary=(
+                f"{len(findings)} deterministic finding(s), language {language}."
+                + (f" AI-assisted interpretation by {ai_outcome.ai_analysis.provider_name}." if ai_outcome.ai_analysis else "")
+            ),
+            findings=findings,
+            ai_outcome=ai_outcome,
+        )
     return _form_page(
         templates,
         request,
@@ -171,6 +188,7 @@ async def _analyze(
 async def code_review_submit(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
+    db: Session = Depends(get_db),
 ):
     form = await request.form()
     code = form.get("code", "")
@@ -188,6 +206,7 @@ async def code_review_submit(
         label="pasted snippet",
         code_value=code,
         ai_consented=consent,
+        db=db,
     )
 
 
@@ -200,6 +219,7 @@ async def code_review_submit(
 async def code_review_upload(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
+    db: Session = Depends(get_db),
 ):
     settings = request.app.state.settings
     form = await request.form()
@@ -262,4 +282,5 @@ async def code_review_upload(
         language_choice=language if language in SUPPORTED_LANGUAGES else detected,
         label=label,
         ai_consented=consent,
+        db=db,
     )
