@@ -8,25 +8,128 @@
   <span class="me-2" aria-hidden="true">&#9888;</span>
   <div>
     <strong>Interpretation notice.</strong> Flagged patterns are indicators for review, not proof
-    of compromise. Likely secrets are masked before anything leaves your machine.
+    of compromise. Secret-looking values are masked in the output — verify at the source before
+    sharing results.
   </div>
 </div>
 
-<div class="card">
-  <div class="card-body">
-    <h2 class="h6">Coming in Phase 3</h2>
-    <p class="text-secondary small mb-3">
-      Bounded text input, field parsing, repeated-failure rules, and sample logs for a safe demo
-      are delivered in Phase 3.
-    </p>
-    <form aria-disabled="true">
-      <div class="mb-2">
-        <label class="form-label" for="log">Log text</label>
-        <textarea class="form-control" id="log" rows="8" disabled
-                  placeholder="Paste log lines, or upload a bounded text file…"></textarea>
+<div class="row g-3 mb-2">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6">Paste log text</h2>
+        <form method="post" action="{{ url_for('log_analysis_submit') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="mb-2">
+            <label class="form-label" for="log">Log text</label>
+            <textarea class="form-control font-monospace" id="log" name="log" rows="10" required
+                      placeholder="Paste authentication log lines (auth.log, sshd, application logs…)…"
+                      aria-describedby="log-help">{{ log_value }}</textarea>
+            <div id="log-help" class="form-text">
+              syslog-style, ISO, and Python logging formats are understood. Limit 512 KiB.
+            </div>
+          </div>
+          <button class="btn btn-phantom" type="submit">Analyze log</button>
+        </form>
       </div>
-      <button class="btn btn-phantom" type="button" disabled>Analyze log</button>
-    </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6">Or upload a log file</h2>
+        <form method="post" action="{{ url_for('log_analysis_upload') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="mb-2">
+            <label class="form-label" for="file">Log file</label>
+            <input class="form-control" type="file" id="file" name="file" required accept=".log,.txt"
+                   aria-describedby="file-help">
+            <div id="file-help" class="form-text">Text files only — .log or .txt. Limit 512 KiB.</div>
+          </div>
+          <button class="btn btn-outline-light" type="submit">Upload &amp; analyze</button>
+        </form>
+        <p class="text-secondary small mt-3 mb-0">
+          The file name is used only as a label. Files are not stored, and secret-looking values
+          are masked in the results.
+        </p>
+      </div>
+    </div>
   </div>
 </div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+  <strong>Analysis not completed.</strong> {{ error }}
+</div>
+{% endif %}
+
+{% if result %}
+{% set stats = result.stats %}
+<section aria-labelledby="results-heading">
+  <h2 class="h5" id="results-heading">
+    Analysis results for <span class="text-break">{{ result_label }}</span>
+  </h2>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <h3 class="h6">Overview</h3>
+      <p class="mb-1">
+        {{ stats.parsed_lines }} of {{ stats.total_lines }} lines parsed ·
+        {{ stats.failed_events }} failed · {{ stats.success_events }} successful ·
+        {{ stats.unique_ips }} source address{{ 'es' if stats.unique_ips != 1 }} ·
+        {{ stats.unique_users }} account{{ 's' if stats.unique_users != 1 }}
+      </p>
+      {% if stats.time_span %}<p class="text-secondary small mb-1">Time span: {{ stats.time_span }}</p>{% endif %}
+      {% if result.sample_parse %}
+      <p class="text-secondary small mb-0">
+        Parsed as <strong>{{ result.sample_parse.format }}</strong> —
+        timestamp, process, source IP, username, and outcome are extracted per line when possible.
+      </p>
+      {% endif %}
+      <p class="text-secondary small mb-0 mt-2">
+        These findings are indicators for review, not proof of compromise. Failed logins also
+        happen for ordinary reasons (a forgotten password, a misconfigured service). Verify
+        before acting.
+      </p>
+    </div>
+  </div>
+
+  {% if result.findings %}
+  <div class="d-flex flex-column gap-3">
+    {% for finding in result.findings %}
+    <article class="card finding-card finding-{{ finding.severity.value | lower }}">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <h3 class="h6 mb-0">
+            {{ finding.title }}
+            <span class="text-secondary fw-normal">{{ finding.location_label }}</span>
+          </h3>
+          <span class="finding-badge finding-badge-{{ finding.severity.value | lower }} badge">
+            {{ finding.severity.value }}
+          </span>
+        </div>
+        <p class="mb-2"><strong>Evidence:</strong> <span class="text-break">{{ finding.evidence }}</span></p>
+        <p class="text-secondary mb-2">{{ finding.explanation }}</p>
+        <p class="mb-2"><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+        <p class="text-secondary small mb-0">
+          Rule {{ finding.rule_id }} · confidence: {{ finding.confidence.value }} · source: deterministic rule
+        </p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-body">
+      <h3 class="h6 mb-1">No indicator patterns found</h3>
+      <p class="text-secondary small mb-0">
+        No repeated-failure bursts, success-after-failure sequences, or visible credential
+        material were detected with the current rules. That is not proof the log is free of
+        problems — review the parsed overview above and the source logs themselves.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

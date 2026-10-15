@@ -15,7 +15,7 @@ security audit. All checks are passive; findings are advisory.
 | 0 — Foundation | FastAPI app, configuration, database, migrations, base UI, CSRF + security headers, test harness | ✅ Done |
 | 1 — Website checker | URL validation, SSRF protections, header rules | ✅ Done |
 | 2 — Source review | Paste/upload flow, deterministic rules, line references | ✅ Done |
-| 3 — Log analysis | Field parsing, repeated-failure rules, sample logs | ⬜ Pending |
+| 3 — Log analysis | Field parsing, repeated-failure rules, sample logs | ✅ Done |
 | 4 — AI assistance | Provider adapter, consent gates, redaction, structured outputs | ⬜ Pending |
 | 5 — History & reports | Persistence UI, deletion, HTML report export | ⬜ Pending |
 | 6 — Polish & release | Accessibility, security review, docs, screenshots | ⬜ Pending |
@@ -88,7 +88,8 @@ all with isolated temporary databases and no network access.
 - Single-user, local-first application; no accounts or multi-tenancy.
 - Website checks observe response headers and redirects only; they cannot see
   server-side configuration.
-- Pattern-based code and log rules are intentionally starter-grade.
+- Log rules cover common syslog/ISO/Python formats and sshd-style lines; exotic formats
+  are scanned for content indicators but may not be structured end-to-end.
 - The optional Semgrep integration from the PRD is deferred: useful rule sets are
   fetched from Semgrep's registry at run time, which would break the local-first,
   no-external-calls stance. Local deterministic rules keep reviews fully offline.

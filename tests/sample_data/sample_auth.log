@@ -1,0 +1,16 @@
+Oct 15 11:58:01 srv sshd[99]: Accepted password for alice from 198.51.100.10 port 55012 ssh2
+Oct 15 12:00:01 srv sshd[101]: Failed password for root from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:03 srv sshd[101]: Failed password for root from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:05 srv sshd[101]: Failed password for invalid user admin from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:07 srv sshd[101]: Failed password for root from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:09 srv sshd[101]: Failed password for root from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:11 srv sshd[101]: Failed password for oracle from 203.0.113.5 port 40222 ssh2
+Oct 15 12:00:13 srv sshd[101]: Accepted password for root from 203.0.113.5 port 40222 ssh2
+Oct 15 12:05:00 srv CRON[55]: pam_unix(cron:session): session opened for user www-data by (uid=0)
+Oct 15 12:06:00 srv nginx: 2026-10-15T12:06:00 request "GET /" Authorization: Bearer sk-live-abcdef123456 blocked
+Oct 15 12:07:00 srv app: password=SuperSecret123 in config dump denied
+Oct 15 12:08:00 srv sshd[120]: Connection closed by authenticating user git 198.51.100.77 [preauth]
+Oct 15 12:08:05 srv sshd[120]: Connection closed by authenticating user git 198.51.100.77 [preauth]
+Oct 15 12:08:10 srv sshd[120]: Connection closed by authenticating user git 198.51.100.77 [preauth]
+Oct 15 12:08:15 srv sshd[120]: Connection closed by authenticating user git 198.51.100.77 [preauth]
+Oct 15 12:08:20 srv sshd[120]: Connection closed by authenticating user git 198.51.100.77 [preauth]

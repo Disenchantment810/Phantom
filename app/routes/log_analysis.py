@@ -1,12 +1,52 @@
-"""Security log analysis (placeholder until Phase 3)."""
+"""Security log analysis (Phase 3).
+
+Paste and upload flows, both CSRF-protected. Log text is analysed as data
+only; findings are indicators for review, not proof of compromise, and every
+result repeats that. Persistence and history arrive in Phase 5.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+import logging
+import os
+import re
 
+from fastapi import APIRouter, Depends, Request
+from fastapi.concurrency import run_in_threadpool
+from starlette.responses import Response
+
+from app.security.csrf import csrf_protect
+from app.services.log_analyzer import LogAnalysisError, analyze_log
 from app.templating import PhantomTemplates, get_templates
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+LOG_EXTENSIONS = (".log", ".txt")
+
+
+def _form_page(
+    templates: PhantomTemplates,
+    request: Request,
+    *,
+    log_value: str = "",
+    error: str | None = None,
+    result=None,
+    result_label: str = "",
+    status_code: int = 200,
+) -> Response:
+    return templates.render(
+        request,
+        "log_analysis.html",
+        {
+            "error": error,
+            "result": result,
+            "result_label": result_label,
+            "log_value": log_value,
+        },
+        status_code=status_code,
+    )
 
 
 @router.api_route("/log-analysis", methods=["GET", "HEAD"], name="log_analysis")
@@ -14,4 +54,132 @@ def log_analysis(
     request: Request,
     templates: PhantomTemplates = Depends(get_templates),
 ):
-    return templates.render(request, "log_analysis.html")
+    return _form_page(templates, request)
+
+
+def _sanitize_label(filename: str) -> str:
+    name = os.path.basename(filename.replace("\\", "/"))
+    name = re.sub(r"[^\w.\- ]", "", name).strip(". ")
+    return name[:80] if name else "uploaded log"
+
+
+async def _analyze(
+    templates: PhantomTemplates,
+    request: Request,
+    *,
+    content: str,
+    label: str,
+    log_value: str = "",
+) -> Response:
+    try:
+        result = await run_in_threadpool(analyze_log, content)
+    except LogAnalysisError as exc:
+        logger.info("Log analysis rejected (%s): %s", label[:40] or "<paste>", exc)
+        return _form_page(
+            templates,
+            request,
+            log_value=log_value,
+            error=str(exc),
+            status_code=400,
+        )
+    except Exception:
+        logger.exception("Log analysis failed unexpectedly")
+        return _form_page(
+            templates,
+            request,
+            log_value=log_value,
+            error=(
+                "The analysis could not be completed. Deterministic features are "
+                "unaffected — please try again."
+            ),
+            status_code=502,
+        )
+    # Echo the MASKED text back into the textarea so copy-pasting the page or
+    # re-sharing the input never re-exposes a secret (PRD privacy stance).
+    from app.services.log_analyzer import mask_secrets
+
+    return _form_page(
+        templates,
+        request,
+        log_value=mask_secrets(content),
+        result=result,
+        result_label=label,
+    )
+@router.api_route(
+    "/log-analysis",
+    methods=["POST"],
+    name="log_analysis_submit",
+    dependencies=[Depends(csrf_protect)],
+)
+async def log_analysis_submit(
+    request: Request,
+    templates: PhantomTemplates = Depends(get_templates),
+):
+    form = await request.form()
+    log_text = form.get("log", "")
+    if not isinstance(log_text, str):
+        log_text = ""
+    return await _analyze(
+        templates,
+        request,
+        content=log_text,
+        label="pasted log",
+        log_value=log_text,
+    )
+
+
+@router.api_route(
+    "/log-analysis/upload",
+    methods=["POST"],
+    name="log_analysis_upload",
+    dependencies=[Depends(csrf_protect)],
+)
+async def log_analysis_upload(
+    request: Request,
+    templates: PhantomTemplates = Depends(get_templates),
+):
+    settings = request.app.state.settings
+    form = await request.form()
+    upload = form.get("file")
+
+    if upload is None or not getattr(upload, "filename", None):
+        return _form_page(
+            templates,
+            request,
+            error="Choose a file to upload, or paste the log text instead.",
+            status_code=400,
+        )
+
+    label = _sanitize_label(upload.filename)
+    if not label.lower().endswith(LOG_EXTENSIONS):
+        return _form_page(
+            templates,
+            request,
+            error=(
+                f"Unsupported file type for {label}. Use a .log or .txt file, "
+                "or paste the text instead."
+            ),
+            status_code=400,
+        )
+
+    content_bytes = await upload.read(settings.upload_max_bytes + 1)
+    if len(content_bytes) > settings.upload_max_bytes:
+        limit_kib = settings.upload_max_bytes // 1024
+        return _form_page(
+            templates,
+            request,
+            error=f"The file is too large (limit {limit_kib} KiB). Paste a smaller excerpt instead.",
+            status_code=400,
+        )
+
+    try:
+        content = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return _form_page(
+            templates,
+            request,
+            error="The file could not be read as UTF-8 text. PHANTOM reviews text logs only.",
+            status_code=400,
+        )
+
+    return await _analyze(templates, request, content=content, label=label)
