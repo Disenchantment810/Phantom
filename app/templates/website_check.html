@@ -12,23 +12,84 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card mb-4">
   <div class="card-body">
-    <h2 class="h6">Coming in Phase 1</h2>
-    <p class="text-secondary small mb-3">
-      URL validation, SSRF protections, header rules, and the results view are delivered in
-      Phase 1 of the build. The form below is not yet active.
-    </p>
-    <form class="row g-2" method="post" action="#" aria-disabled="true">
-      <div class="col-md-8">
-        <label class="form-label" for="url">Website URL</label>
-        <input class="form-control" type="url" id="url" name="url"
-               placeholder="https://example.com" disabled>
-      </div>
-      <div class="col-md-4 d-flex align-items-end">
-        <button class="btn btn-phantom w-100" type="button" disabled>Run check</button>
+    <form method="post" action="{{ url_for('website_check_submit') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="form-label" for="url">Website URL</label>
+      <div class="row g-2">
+        <div class="col-md-8">
+          <input class="form-control" type="text" id="url" name="url" required
+                 placeholder="example.com or https://example.com" value="{{ url_value }}"
+                 aria-describedby="url-help">
+          <div id="url-help" class="form-text">
+            A bare domain is checked over HTTPS. Only http and https are supported.
+          </div>
+        </div>
+        <div class="col-md-4 d-flex align-items-start">
+          <button class="btn btn-phantom w-100" type="submit">Run check</button>
+        </div>
       </div>
     </form>
+
+    {% if error %}
+    <div class="alert alert-danger mt-3 mb-0" role="alert">
+      <strong>Check not completed.</strong> {{ error }}
+    </div>
+    {% endif %}
   </div>
 </div>
+
+{% if result %}
+<section aria-labelledby="results-heading">
+  <h2 class="h5" id="results-heading">Results for <span class="text-break">{{ result.final_url }}</span></h2>
+  <p class="text-secondary small mb-3">
+    HTTP {{ result.status_code }} · checked {{ result.checked_at.strftime('%Y-%m-%d %H:%M UTC') }}
+    · {{ result.elapsed_ms }} ms ·
+    {% if result.response_truncated %}response body truncated after 64 KiB (headers were fully read){% else %}response fully read{% endif %}
+  </p>
+
+  {% if result.redirect_chain | length > 1 %}
+  <p class="small">
+    <strong>Redirect chain:</strong>
+    {% for hop in result.redirect_chain %}
+      <span class="text-break">{{ hop }}</span>{% if not loop.last %} <span aria-hidden="true">&rarr;</span> {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <h3 class="h6">Summary</h3>
+      <p class="mb-0">{{ result.summary }}</p>
+      <p class="text-secondary small mb-0 mt-2">
+        Findings are advisory and require human verification. A missing header is hardening
+        advice, not proof that the site is exploitable; a complete result is not proof the
+        site is secure.
+      </p>
+    </div>
+  </div>
+
+  <div class="d-flex flex-column gap-3">
+    {% for finding in result.findings %}
+    <article class="card finding-card finding-{{ finding.severity.value | lower }}">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <h4 class="h6 mb-0">{{ finding.title }}</h4>
+          <span class="badge finding-badge finding-badge-{{ finding.severity.value | lower }}">
+            {{ finding.severity.value }}
+          </span>
+        </div>
+        <p class="mb-2"><strong>Evidence:</strong> <span class="text-break">{{ finding.evidence }}</span></p>
+        <p class="text-secondary mb-2">{{ finding.explanation }}</p>
+        <p class="mb-2"><strong>Recommendation:</strong> {{ finding.recommendation }}</p>
+        <p class="text-secondary small mb-0">
+          Confidence: {{ finding.confidence.value }} · source: deterministic rule
+        </p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

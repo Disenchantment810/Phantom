@@ -60,6 +60,20 @@ footer { flex-shrink: 0; }
   color: var(--phantom-text);
 }
 
+/* Finding severity badges: colour reinforces the text label, never replaces it. */
+.finding-badge-informational { background-color: #3a4a5d; color: #e3eaf2; }
+.finding-badge-low { background-color: #4a4327; color: #f0e6b0; }
+.finding-badge-medium { background-color: #5c4a1e; color: #ffd88a; }
+.finding-badge-high { background-color: #5f2e2e; color: #ffb3b3; }
+.finding-badge-critical { background-color: #6e1f1f; color: #ffffff; }
+
+.finding-card { border-left-width: 4px; }
+.finding-informational { border-left-color: #3a4a5d; }
+.finding-low { border-left-color: #b58a2e; }
+.finding-medium { border-left-color: #d29922; }
+.finding-high { border-left-color: #e5534b; }
+.finding-critical { border-left-color: #ff4747; }
+
 .btn-phantom {
   background-color: var(--phantom-accent);
   border-color: var(--phantom-accent);
