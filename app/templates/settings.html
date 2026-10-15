@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Settings</h1>
+<p class="text-secondary">Current configuration. Values are set via environment variables or a local .env file.</p>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table mb-0 align-middle">
+      <tbody>
+        <tr>
+          <th scope="row">Environment</th>
+          <td>{{ environment | title }}</td>
+        </tr>
+        <tr>
+          <th scope="row">AI assistance</th>
+          <td>
+            {% if ai_provider_configured %}
+            <span class="badge status-badge">Configured</span>
+            {% else %}
+            <span class="badge status-badge">Disabled</span>
+            <span class="text-secondary small ms-1">no provider configured; deterministic features are unaffected</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Max request body</th>
+          <td>{{ "%.0f" | format(max_body_bytes / 1024) }} KiB</td>
+        </tr>
+        <tr>
+          <th scope="row">Max upload size</th>
+          <td>{{ "%.0f" | format(upload_max_bytes / 1024) }} KiB</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-secondary small mt-3">
+  API keys and secrets are never displayed on this page and never appear in analysis records.
+</p>
+{% endblock %}

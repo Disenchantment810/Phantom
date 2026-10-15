@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Server error · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <p class="display-6 mb-1" aria-hidden="true">&#9888;</p>
+  <h1 class="h3">Something went wrong</h1>
+  <p class="text-secondary">An unexpected error occurred. Deterministic findings you already saved are unaffected.</p>
+  <a class="btn btn-phantom" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+</div>
+{% endblock %}

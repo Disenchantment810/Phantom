@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Log Analysis · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Security log analysis</h1>
+<p class="text-secondary">Pattern-based review of pasted or uploaded authentication logs.</p>
+
+<div class="alert alert-warning d-flex align-items-start" role="note">
+  <span class="me-2" aria-hidden="true">&#9888;</span>
+  <div>
+    <strong>Interpretation notice.</strong> Flagged patterns are indicators for review, not proof
+    of compromise. Likely secrets are masked before anything leaves your machine.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6">Coming in Phase 3</h2>
+    <p class="text-secondary small mb-3">
+      Bounded text input, field parsing, repeated-failure rules, and sample logs for a safe demo
+      are delivered in Phase 3.
+    </p>
+    <form aria-disabled="true">
+      <div class="mb-2">
+        <label class="form-label" for="log">Log text</label>
+        <textarea class="form-control" id="log" rows="8" disabled
+                  placeholder="Paste log lines, or upload a bounded text file…"></textarea>
+      </div>
+      <button class="btn btn-phantom" type="button" disabled>Analyze log</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

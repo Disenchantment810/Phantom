@@ -1,0 +1,106 @@
+/* PHANTOM — restrained dark security-operations theme on top of Bootstrap's
+   dark palette. Colour is never the only signal: severity and status always
+   carry text labels too (PRD §10). */
+
+:root {
+  --phantom-bg: #0e131a;
+  --phantom-surface: #151d27;
+  --phantom-border: #24303f;
+  --phantom-accent: #53d6e0;
+  --phantom-text: #d8dee6;
+  --phantom-muted: #8b98a8;
+}
+
+body {
+  background-color: var(--phantom-bg);
+  color: var(--phantom-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main { flex: 1 0 auto; }
+footer { flex-shrink: 0; }
+
+.navbar-phantom {
+  background-color: var(--phantom-surface);
+}
+
+.brand-mark { color: var(--phantom-accent); }
+
+.navbar .nav-link {
+  color: var(--phantom-muted);
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus-visible,
+.navbar .nav-link.active {
+  color: var(--phantom-text);
+}
+
+.card,
+.workflow-card {
+  background-color: var(--phantom-surface);
+  border-color: var(--phantom-border);
+}
+
+.card-header {
+  background-color: var(--phantom-surface);
+  border-bottom-color: var(--phantom-border);
+}
+
+.phase-badge {
+  background-color: transparent;
+  color: var(--phantom-accent);
+  border: 1px solid var(--phantom-accent);
+}
+
+.status-badge {
+  background-color: var(--phantom-border);
+  color: var(--phantom-text);
+}
+
+.btn-phantom {
+  background-color: var(--phantom-accent);
+  border-color: var(--phantom-accent);
+  color: #06222a;
+  font-weight: 600;
+}
+
+.btn-phantom:hover,
+.btn-phantom:focus-visible {
+  background-color: #7fe3eb;
+  border-color: #7fe3eb;
+  color: #06222a;
+}
+
+a { color: var(--phantom-accent); }
+
+.form-control,
+.form-control:focus {
+  background-color: #0b1017;
+  border-color: var(--phantom-border);
+  color: var(--phantom-text);
+}
+
+.form-control:disabled {
+  background-color: #10161f;
+  color: var(--phantom-muted);
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--phantom-text);
+  --bs-table-border-color: var(--phantom-border);
+}
+
+.text-secondary { color: var(--phantom-muted) !important; }
+
+/* Visible keyboard focus for accessibility (PRD §6). */
+a:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--phantom-accent);
+  outline-offset: 2px;
+}

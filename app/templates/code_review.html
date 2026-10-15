@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Code Review · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Source code security review</h1>
+<p class="text-secondary">A first-pass review of pasted or uploaded code for common issue patterns.</p>
+
+<div class="alert alert-warning d-flex align-items-start" role="note">
+  <span class="me-2" aria-hidden="true">&#9888;</span>
+  <div>
+    <strong>Privacy notice.</strong> Remove secrets, credentials, and personal data before
+    submitting code. Uploaded content is treated as untrusted data and is never executed.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6">Coming in Phase 2</h2>
+    <p class="text-secondary small mb-3">
+      Paste/upload flow, size and type limits, deterministic rules with line references, and
+      side-by-side evidence and fixes are delivered in Phase 2.
+    </p>
+    <form aria-disabled="true">
+      <div class="mb-2">
+        <label class="form-label" for="code">Code</label>
+        <textarea class="form-control" id="code" rows="8" disabled
+                  placeholder="Paste code, or upload a supported text file…"></textarea>
+      </div>
+      <button class="btn btn-phantom" type="button" disabled>Review code</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

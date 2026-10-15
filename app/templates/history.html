@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}History · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Analysis history</h1>
+<p class="text-secondary">Saved analyses. Opening and deleting individual analyses arrives in Phase 5.</p>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if analyses %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Type</th>
+          <th scope="col">Target</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for analysis in analyses %}
+        <tr>
+          <td>{{ analysis.id }}</td>
+          <td>{{ analysis.analysis_type.value | replace('_', ' ') | title }}</td>
+          <td class="text-break">{{ analysis.target_label }}</td>
+          <td><span class="badge status-badge">{{ analysis.status.value | title }}</span></td>
+          <td>{{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-secondary px-3 py-4 mb-0">
+      Nothing here yet. Analyses are saved automatically once the workflows start producing results.
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

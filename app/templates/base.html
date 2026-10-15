@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/vendor/css/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-phantom border-bottom">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="{{ url_for('dashboard') }}">
+        <span class="brand-mark" aria-hidden="true">&#9678;</span> {{ app_name }}
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+              aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto">
+          {% set path = request.url.path %}
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/' %}active{% endif %}"
+               {% if path == '/' %}aria-current="page"{% endif %} href="{{ url_for('dashboard') }}">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/website-check' %}active{% endif %}"
+               {% if path == '/website-check' %}aria-current="page"{% endif %} href="{{ url_for('website_check') }}">Website Check</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/code-review' %}active{% endif %}"
+               {% if path == '/code-review' %}aria-current="page"{% endif %} href="{{ url_for('code_review') }}">Code Review</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/log-analysis' %}active{% endif %}"
+               {% if path == '/log-analysis' %}aria-current="page"{% endif %} href="{{ url_for('log_analysis') }}">Log Analysis</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/history' %}active{% endif %}"
+               {% if path == '/history' %}aria-current="page"{% endif %} href="{{ url_for('history') }}">History</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if path == '/settings' %}active{% endif %}"
+               {% if path == '/settings' %}aria-current="page"{% endif %} href="{{ url_for('settings') }}">Settings</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container py-4 border-top text-secondary small">
+    <p class="mb-1">
+      {{ app_name }} is an educational analysis workbench. All results are advisory and must be
+      verified by a human. A clean result is not proof that a system is secure.
+    </p>
+    <p class="mb-0">Version {{ app_version }} &middot; Passive checks only &middot; No exploit execution</p>
+  </footer>
+
+  <script src="{{ url_for('static', path='/vendor/js/bootstrap.bundle.min.js') }}" defer></script>
+</body>
+</html>

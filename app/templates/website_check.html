@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Website Check · {{ app_name }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Website security configuration check</h1>
+<p class="text-secondary">A limited, passive check of one website's response headers and HTTPS behaviour.</p>
+
+<div class="alert alert-warning d-flex align-items-start" role="note">
+  <span class="me-2" aria-hidden="true">&#9888;</span>
+  <div>
+    <strong>Authorization notice.</strong> Only assess websites you own or have explicit permission
+    to test. PHANTOM sends one bounded request and never scans ports, crawls, or runs exploits.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6">Coming in Phase 1</h2>
+    <p class="text-secondary small mb-3">
+      URL validation, SSRF protections, header rules, and the results view are delivered in
+      Phase 1 of the build. The form below is not yet active.
+    </p>
+    <form class="row g-2" method="post" action="#" aria-disabled="true">
+      <div class="col-md-8">
+        <label class="form-label" for="url">Website URL</label>
+        <input class="form-control" type="url" id="url" name="url"
+               placeholder="https://example.com" disabled>
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <button class="btn btn-phantom w-100" type="button" disabled>Run check</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

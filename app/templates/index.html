@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col">
+    <h1 class="h3 mb-1">Security analysis workbench</h1>
+    <p class="text-secondary mb-0">
+      Review website configuration, source code, and security logs — with evidence attached to every finding.
+    </p>
+  </div>
+</div>
+
+<div class="alert alert-warning d-flex align-items-start" role="note">
+  <span class="me-2" aria-hidden="true">&#9888;</span>
+  <div>
+    <strong>Advisory notice.</strong> Results may contain false positives or false negatives and
+    require human verification. PHANTOM performs passive checks only and never proves that a
+    system is secure.
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card h-100 workflow-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h2 class="h5 mb-1">Website Check</h2>
+          <span class="badge phase-badge">Phase 1</span>
+        </div>
+        <p class="text-secondary small">
+          Passive header and HTTPS configuration check for one URL you are authorized to assess.
+        </p>
+        <a class="btn btn-sm btn-phantom" href="{{ url_for('website_check') }}">Open</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100 workflow-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h2 class="h5 mb-1">Code Review</h2>
+          <span class="badge phase-badge">Phase 2</span>
+        </div>
+        <p class="text-secondary small">
+          First-pass review of pasted or uploaded PHP, JavaScript, Python, or SQL — never executed.
+        </p>
+        <a class="btn btn-sm btn-phantom" href="{{ url_for('code_review') }}">Open</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100 workflow-card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h2 class="h5 mb-1">Log Analysis</h2>
+          <span class="badge phase-badge">Phase 3</span>
+        </div>
+        <p class="text-secondary small">
+          Pattern-based review of authentication logs: failed-login bursts and follow-on successes.
+        </p>
+        <a class="btn btn-sm btn-phantom" href="{{ url_for('log_analysis') }}">Open</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="h6 mb-0">Recent analyses</h2>
+    <a class="small" href="{{ url_for('history') }}">View all ({{ total_analyses }})</a>
+  </div>
+  <div class="card-body p-0">
+    {% if recent %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Type</th>
+          <th scope="col">Target</th>
+          <th scope="col">Status</th>
+          <th scope="col">Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for analysis in recent %}
+        <tr>
+          <td>{{ analysis.id }}</td>
+          <td>{{ analysis.analysis_type.value | replace('_', ' ') | title }}</td>
+          <td class="text-break">{{ analysis.target_label }}</td>
+          <td><span class="badge status-badge">{{ analysis.status.value | title }}</span></td>
+          <td>{{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-secondary px-3 py-4 mb-0">
+      No analyses yet. Start with one of the workflows above — this list fills in as you run them.
+    </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

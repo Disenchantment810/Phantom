@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Request failed · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <h1 class="h3">Request failed ({{ status_code }})</h1>
+  <p class="text-secondary">{{ message }}</p>
+  <a class="btn btn-phantom" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+</div>
+{% endblock %}

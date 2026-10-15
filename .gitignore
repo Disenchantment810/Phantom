@@ -27,3 +27,6 @@ uploads/
 .vscode/
 .idea/
 .DS_Store
+
+# Local agent/CLI tooling state
+.abacusai/
