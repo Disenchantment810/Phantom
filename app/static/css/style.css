@@ -74,6 +74,18 @@ footer { flex-shrink: 0; }
 .finding-high { border-left-color: #e5534b; }
 .finding-critical { border-left-color: #ff4747; }
 
+/* Code evidence blocks: monospace, scrollable, no inline styles needed. */
+.code-evidence {
+  background-color: #0b1017;
+  border: 1px solid var(--phantom-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  max-height: 12rem;
+  overflow: auto;
+  font-size: 0.8125rem;
+  color: var(--phantom-text);
+}
+
 .btn-phantom {
   background-color: var(--phantom-accent);
   border-color: var(--phantom-accent);

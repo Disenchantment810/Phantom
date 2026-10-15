@@ -12,21 +12,148 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="card-body">
-    <h2 class="h6">Coming in Phase 2</h2>
-    <p class="text-secondary small mb-3">
-      Paste/upload flow, size and type limits, deterministic rules with line references, and
-      side-by-side evidence and fixes are delivered in Phase 2.
-    </p>
-    <form aria-disabled="true">
-      <div class="mb-2">
-        <label class="form-label" for="code">Code</label>
-        <textarea class="form-control" id="code" rows="8" disabled
-                  placeholder="Paste code, or upload a supported text file…"></textarea>
+<div class="row g-3 mb-2">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6">Paste code</h2>
+        <form method="post" action="{{ url_for('code_review_submit') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="mb-2">
+            <label class="form-label" for="code">Code</label>
+            <textarea class="form-control font-monospace" id="code" name="code" rows="10" required
+                      placeholder="Paste the section you want reviewed…" aria-describedby="code-help">{{ code_value }}</textarea>
+            <div id="code-help" class="form-text">
+              Analyzed as text only — never run. Limit 512 KiB.
+            </div>
+          </div>
+          <div class="row g-2 align-items-end">
+            <div class="col-sm-6">
+              <label class="form-label" for="language">Language</label>
+              <select class="form-select" id="language" name="language">
+                <option value="auto" {% if language_choice == 'auto' %}selected{% endif %}>Auto-detect</option>
+                {% for lang in supported_languages %}
+                <option value="{{ lang }}" {% if language_choice == lang %}selected{% endif %}>{{ language_labels[lang] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6 d-grid">
+              <button class="btn btn-phantom" type="submit">Review code</button>
+            </div>
+          </div>
+        </form>
       </div>
-      <button class="btn btn-phantom" type="button" disabled>Review code</button>
-    </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6">Or upload a file</h2>
+        <form method="post" action="{{ url_for('code_review_upload') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="mb-2">
+            <label class="form-label" for="file">Source file</label>
+            <input class="form-control" type="file" id="file" name="file" required
+                   accept=".php,.php3,.php4,.php5,.phtml,.inc,.js,.mjs,.cjs,.jsx,.py,.pyw,.sql"
+                   aria-describedby="file-help">
+            <div id="file-help" class="form-text">
+              Text files only — {{ supported_extensions }}. Limit 512 KiB.
+            </div>
+          </div>
+          <div class="row g-2 align-items-end">
+            <div class="col-sm-6">
+              <label class="form-label" for="language-upload">Language</label>
+              <select class="form-select" id="language-upload" name="language">
+                <option value="auto" selected>From file extension</option>
+                {% for lang in supported_languages %}
+                <option value="{{ lang }}">{{ language_labels[lang] }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6 d-grid">
+              <button class="btn btn-outline-light" type="submit">Upload &amp; review</button>
+            </div>
+          </div>
+        </form>
+        <p class="text-secondary small mt-3 mb-0">
+          The file name is used only as a label in the results. Files are not stored.
+        </p>
+      </div>
+    </div>
   </div>
 </div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+  <strong>Review not completed.</strong> {{ error }}
+</div>
+{% endif %}
+
+{% if result %}
+{% set language, findings = result %}
+<section aria-labelledby="results-heading">
+  <h2 class="h5" id="results-heading">
+    Review results for <span class="text-break">{{ result_label }}</span>
+    <span class="badge status-badge ms-1">{{ language_labels[language] }}</span>
+  </h2>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      {% set counts = namespace(critical=0, high=0, medium=0, low=0, informational=0) %}
+      {% for finding in findings %}
+        {% if finding.severity.value | lower == 'critical' %}{% set counts.critical = counts.critical + 1 %}{% endif %}
+        {% if finding.severity.value | lower == 'high' %}{% set counts.high = counts.high + 1 %}{% endif %}
+        {% if finding.severity.value | lower == 'medium' %}{% set counts.medium = counts.medium + 1 %}{% endif %}
+        {% if finding.severity.value | lower == 'low' %}{% set counts.low = counts.low + 1 %}{% endif %}
+        {% if finding.severity.value | lower == 'informational' %}{% set counts.informational = counts.informational + 1 %}{% endif %}
+      {% endfor %}
+      <p class="mb-1">
+        {{ findings | length }} finding{{ 's' if findings | length != 1 }} —
+        {% if counts.critical %}{{ counts.critical }} critical, {% endif %}
+        {% if counts.high %}{{ counts.high }} high, {% endif %}
+        {% if counts.medium %}{{ counts.medium }} medium, {% endif %}
+        {% if counts.low %}{{ counts.low }} low{% endif %}
+        {%- if not counts.critical and not counts.high and not counts.medium and not counts.low %} no issues flagged{% endif %}
+      </p>
+      <p class="text-secondary small mb-0">
+        Pattern-based review — false positives are possible and not every issue class is
+        covered. Verify each finding by reading the surrounding code. Nothing was executed
+        during this review.
+      </p>
+    </div>
+  </div>
+
+  <div class="d-flex flex-column gap-3">
+    {% for finding in findings %}
+    <article class="card finding-card finding-{{ finding.severity.value | lower }}">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <h3 class="h6 mb-0">
+            {{ finding.title }}
+            <span class="text-secondary fw-normal">{{ finding.location_label }}</span>
+          </h3>
+          <span class="finding-badge finding-badge-{{ finding.severity.value | lower }} badge">
+            {{ finding.severity.value }}
+          </span>
+        </div>
+        <div class="row g-2 mt-1">
+          <div class="col-md-6">
+            <h4 class="small text-secondary mb-1">Evidence</h4>
+            <pre class="code-evidence mb-0"><code>{{ finding.evidence }}</code></pre>
+          </div>
+          <div class="col-md-6">
+            <h4 class="small text-secondary mb-1">Suggested fix</h4>
+            <p class="mb-0 small">{{ finding.recommendation }}</p>
+          </div>
+        </div>
+        <p class="text-secondary small mt-2 mb-0">{{ finding.explanation }}</p>
+        <p class="text-secondary small mb-0">
+          Rule {{ finding.rule_id }} · confidence: {{ finding.confidence.value }} · source: deterministic rule
+        </p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}
