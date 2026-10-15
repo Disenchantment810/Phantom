@@ -123,4 +123,4 @@ Screenshots are not committed; capture locally if you want them.
 
 ## License
 
-Not yet chosen — decide before publishing to a public repository.
+MIT — see [LICENSE](LICENSE).
